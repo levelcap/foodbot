@@ -2,6 +2,11 @@
 const app = require('../app');
 const debug = require('debug')('init:server');
 const http = require('http');
+const MongoClient = require('mongodb').MongoClient;
+const RedisSMQ = require("rsmq");
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
@@ -10,6 +15,12 @@ const server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+const mongoUri = process.env.MONGODB_URI;
+const options = {
+  url: process.env.REDIS_URL,
+};
+const rsmq = new RedisSMQ({ options });
 
 function normalizePort(val) {
   const port = parseInt(val, 10);
@@ -46,10 +57,18 @@ function onError(error) {
   }
 }
 
-function onListening() {
+async function onListening() {
   const addr = server.address();
   const bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  console.log(`Server started on ${bind}`)
+  console.log(`Server started on ${bind}`);
+  MongoClient.connect(mongoUri, (mongoErr, mongoDb) => {
+    if (mongoErr) {
+      console.log(mongoErr);
+      process.exit(1);
+    }
+    console.log('Successfully connected to mongo');
+  });
+
 }
