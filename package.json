@@ -7,14 +7,20 @@
   },
   "dependencies": {
     "body-parser": "~1.18.2",
+    "cheerio": "^1.0.0-rc.2",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.9",
     "dotenv": "^6.0.0",
     "express": "~4.15.5",
     "jade": "~1.11.0",
+    "lodash": "^4.17.10",
     "mongodb": "^3.1.1",
     "morgan": "~1.9.0",
+    "request": "^2.87.0",
+    "request-promise-native": "^1.0.5",
     "rsmq": "^0.9.2",
+    "rsmq-promise": "^1.0.1",
+    "rsmq-worker": "^0.5.2",
     "serve-favicon": "~2.4.5"
   }
 }
