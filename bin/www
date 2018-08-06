@@ -21,6 +21,9 @@ server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
+console.log(process.env.MONGODB_URI);
+console.log(process.env.REDIS_URL);
+
 const mongoUri = process.env.MONGODB_URI;
 const options = {
   url: process.env.REDIS_URL,
@@ -81,7 +84,6 @@ async function getAllRecipe(index) {
       }
     });
     recipeString = recipeString.concat(`\n~\n\n`);
-    console.log(recipeString);
     const collection = mongo.collection('recipes');
     const recipeObj = {
       source: 'allRecipes',
@@ -90,36 +92,40 @@ async function getAllRecipe(index) {
     };
     collection.insert(recipeObj, (err, res) => {});
   } catch (err) {
-    console.log(err);
     return;
   }
 }
 
 function createAndStartWorker() {
-  const worker = new RSMQWorker( 'allRecipes', workerOptions );
-  worker.on( "message", async function( msg, next, id ){
-    // process your message
-    console.log("Message: " + msg);
-    try {
-      await getAllRecipe(msg);
-    } catch (err) {
-      console.log(err);
-    }
-    next();
-  });
+  try {
+    const worker = new RSMQWorker('allRecipes', workerOptions);
+    worker.on("message", async function(msg, next, id) {
+      // process your message
+      console.log("Message: " + msg);
+      // try {
+      //   await getAllRecipe(msg);
+      // } catch (err) {
+      //   console.log(err);
+      // }
+      next();
+    });
 
-  // optional error listeners
-  worker.on('error', function( err, msg ){
-    console.log( "ERROR", err, msg.id );
-  });
-  worker.on('exceeded', function( msg ){
-    console.log( "EXCEEDED", msg.id );
-  });
-  worker.on('timeout', function( msg ){
-    console.log( "TIMEOUT", msg.id, msg.rc );
-  });
+    // optional error listeners
+    worker.on('error', function(err, msg) {
+      console.log("ERROR", err, msg.id);
+    });
+    worker.on('exceeded', function(msg) {
+      console.log("EXCEEDED", msg.id);
+    });
+    worker.on('timeout', function(msg) {
+      console.log("TIMEOUT", msg.id, msg.rc);
+    });
 
-  worker.start();
+    worker.start();
+    console.log('Worker started');
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 function normalizePort(val) {
