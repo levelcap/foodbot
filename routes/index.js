@@ -10,8 +10,11 @@ router.get('/allRecipes', async function(req, res, next) {
   res.status(200).json({ status: 'Success' });
   for (let i = allIndexStart; i <= allIndexEnd; i++) {
     console.log(`Adding ${i} to queue`);
-    console.log(getRsmq());
-    await getRsmq().sendMessage({ qname: 'allRecipes', message: i.toString() });
+    try {
+      await getRsmq().sendMessage({ qname: 'allRecipes', message: i.toString() });
+    } catch (err) {
+      console.log(err);
+    }
   }
 });
 
