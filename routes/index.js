@@ -1,7 +1,7 @@
 const express = require('express');
 const { getRsmq } = require('../src/common');
 const router = express.Router();
-const RedisSMQ = require("rsmq");
+const RedisSMQ = require('rsmq-promise');
 const allIndexStart = 39305;
 const allIndexEnd = 265000;
 
