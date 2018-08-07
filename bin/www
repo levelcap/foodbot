@@ -100,11 +100,11 @@ function createAndStartWorker() {
     worker.on("message", async function(msg, next, id) {
       // process your message
       console.log("Message: " + msg);
-      // try {
-      //   await getAllRecipe(msg);
-      // } catch (err) {
-      //   console.log(err);
-      // }
+      try {
+        await getAllRecipe(msg);
+      } catch (err) {
+        console.log(err);
+      }
       next();
     });
 
@@ -117,13 +117,6 @@ function createAndStartWorker() {
     });
     worker.on('timeout', function(msg) {
       console.log("TIMEOUT", msg.id, msg.rc);
-    });
-
-    worker.on('ready', function() {
-      console.log('Worker ready');
-    });
-    worker.on('data', function() {
-      console.log('data');
     });
 
     worker.start();
