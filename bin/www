@@ -3,7 +3,8 @@ const app = require('../app');
 const debug = require('debug')('init:server');
 const http = require('http');
 const MongoClient = require('mongodb').MongoClient;
-const RedisSMQ = require('rsmq-promise');
+const redis = require('redis');
+const RSMQPromise = require('rsmq-promise');
 const RSMQWorker = require('rsmq-worker');
 const dotenv = require('dotenv');
 const request = require('request-promise-native');
@@ -21,21 +22,12 @@ server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
-console.log(process.env.MONGODB_URI);
-console.log(process.env.REDIS_URL);
-
 const mongoUri = process.env.MONGODB_URI;
+const redisClient = redis.createClient(process.env.REDISTOGO_URL);
 const options = {
-  url: process.env.REDIS_URL,
+  client: redisClient,
 };
-const rsmq = new RedisSMQ({ options });
-const workerOptions = {
-  autostart: true,
-  timeout: 5000,
-  rsmq,
-  alwaysLogErrors: true,
-};
-setRsmq(rsmq);
+const rsmq = new RSMQPromise(options);
 
 function cleanLine(line) {
   line = line.replace(new RegExp('\n', 'g'), '');
@@ -98,6 +90,12 @@ async function getAllRecipe(index) {
 
 function createAndStartWorker() {
   try {
+    const workerOptions = {
+      autostart: true,
+      timeout: 5000,
+      rsmq: rsmq.rsmq,
+      alwaysLogErrors: true,
+    };
     const worker = new RSMQWorker('allRecipes', workerOptions);
     worker.on("message", async function(msg, next, id) {
       // process your message
@@ -119,6 +117,13 @@ function createAndStartWorker() {
     });
     worker.on('timeout', function(msg) {
       console.log("TIMEOUT", msg.id, msg.rc);
+    });
+
+    worker.on('ready', function() {
+      console.log('Worker ready');
+    });
+    worker.on('data', function() {
+      console.log('data');
     });
 
     worker.start();
@@ -163,13 +168,13 @@ function onError(error) {
   }
 }
 
-function onListening() {
+async function onListening() {
   const addr = server.address();
   const bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   console.log(`Server started on ${bind}`);
-  MongoClient.connect(mongoUri, { useNewUrlParser: true }, (mongoErr, client) => {
+  MongoClient.connect(mongoUri, { useNewUrlParser: true }, async (mongoErr, client) => {
     if (mongoErr) {
       console.log(mongoErr);
       process.exit(1);
@@ -177,6 +182,14 @@ function onListening() {
     console.log('Successfully connected to mongo');
     const mongoDb = client.db('heroku_sc45bhlb');
     setMongo(mongoDb);
+    console.log('Making the dumb queue or whatever');
+    try {
+      await rsmq.createQueue({ qname: 'allRecipes' });
+      console.log('Created allRecipes queue');
+    } catch (err) {
+      console.log('Probably already created error');
+    }
+    setRsmq(rsmq);
     createAndStartWorker();
   });
 }
