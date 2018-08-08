@@ -82,7 +82,67 @@ async function getAllRecipe(index) {
       index,
       text: recipeString,
     };
-    collection.insert(recipeObj, (err, res) => {});
+    collection.insert(recipeObj, (err, res) => {
+      if (err) {
+        console.log(err);
+      }
+    });
+  } catch (err) {
+    return;
+  }
+}
+
+async function getGeniusRecipe(index) {
+  const mongo = getMongo();
+  const options = {
+    uri: `http://www.geniuskitchen.com/recipe/whocares-${index}`,
+    transform: (body) => {
+      return cheerio.load(body);
+    },
+    maxRedirects: 5,
+  };
+  try {
+    let recipeString = "";
+    const $ = await request(options);
+    const title = $('.recipe-header h1').text();
+    if (!title) {
+      return;
+    }
+    recipeString = recipeString.concat(`title:${cleanLine(title)}\n`);
+    const author = $('.byline a').text().trim();
+    recipeString = recipeString.concat(`author:${cleanLine(author)}\n\n`);
+
+    recipeString = recipeString.concat(`categories:\n`);
+    const category = $('.gk-breadcrumbs a').last().text();
+    recipeString = recipeString.concat(`${cleanLine(category)}\n`);
+
+    recipeString = recipeString.concat(`\ningredients:\n`);
+    $('.ingredient-list li').each((i, list) => {
+      const ingredientText = $(list).text().replace(new RegExp('  ', 'g'), ' ');
+      if (ingredientText) {
+        recipeString = recipeString.concat(`${cleanLine(ingredientText)}\n`);
+      }
+    });
+
+    recipeString = recipeString.concat(`\ndirections:\n`);
+    $('.directions-inner ol li').each((i, elem) => {
+      const directionText = $(elem).text();
+      if (directionText && !directionText.includes('Submit a Correction')) {
+        recipeString = recipeString.concat(`${cleanLine(directionText)}\n`);
+      }
+    });
+    recipeString = recipeString.concat(`\n~\n\n`);
+    const collection = mongo.collection('recipes');
+    const recipeObj = {
+      source: 'geniuskitchen',
+      index,
+      text: recipeString,
+    };
+    collection.insert(recipeObj, (err, res) => {
+      if (err) {
+        console.log(err);
+      }
+    });
   } catch (err) {
     return;
   }
