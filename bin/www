@@ -2,6 +2,7 @@
 const app = require('../app');
 const debug = require('debug')('init:server');
 const http = require('http');
+const _ = require('lodash');
 const MongoClient = require('mongodb').MongoClient;
 const redis = require('redis');
 const RSMQPromise = require('rsmq-promise');
@@ -41,7 +42,7 @@ async function getAllRecipe(index) {
     transform: (body) => {
       return cheerio.load(body);
     },
-    maxRedirects: 5,
+    maxRedirects: 10,
   };
   try {
     let recipeString = "";
@@ -82,12 +83,20 @@ async function getAllRecipe(index) {
       index,
       text: recipeString,
     };
-    collection.insert(recipeObj, (err, res) => {
-      if (err) {
-        console.log(err);
-      }
+    return new Promise((resolve) => {
+      collection.insert(recipeObj, (err, res) => {
+        if (err) {
+          console.log(err);
+        }
+        console.log(`Inserting ${index}`);
+        return resolve();
+      });
     });
   } catch (err) {
+    const errName = _.get(err, 'name');
+    if (errName === 'StatusCodeError') {
+      console.log(`StatusCodeError for index ${index}: ${err.statusCode}`);
+    }
     return;
   }
 }
@@ -138,12 +147,20 @@ async function getGeniusRecipe(index) {
       index,
       text: recipeString,
     };
-    collection.insert(recipeObj, (err, res) => {
-      if (err) {
-        console.log(err);
-      }
+    return new Promise((resolve) => {
+      collection.insert(recipeObj, (err, res) => {
+        if (err) {
+          console.log(err);
+        }
+        console.log(`Inserting ${index}`);
+        return resolve();
+      });
     });
   } catch (err) {
+    const errName = _.get(err, 'name');
+    if (errName === 'StatusCodeError') {
+      console.log(`StatusCodeError for index ${index}: ${err.statusCode}`);
+    }
     return;
   }
 }
@@ -162,6 +179,7 @@ function createAndStartWorker() {
       console.log("Message: " + msg);
       try {
         await getAllRecipe(msg);
+        console.log('Done');
       } catch (err) {
         console.log(err);
       }
