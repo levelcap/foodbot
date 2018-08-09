@@ -49,6 +49,7 @@ async function getAllRecipe(index) {
     const $ = await request(options);
     const title = $('.recipe-summary__h1').text();
     if (!title || title === johnsonville) {
+      console.log(` ${index} is just more sausages!`)
       return;
     }
     recipeString = recipeString.concat(`title:${cleanLine(title)}\n`);
@@ -160,6 +161,8 @@ async function getGeniusRecipe(index) {
     const errName = _.get(err, 'name');
     if (errName === 'StatusCodeError') {
       console.log(`StatusCodeError for index ${index}: ${err.statusCode}`);
+    } else {
+      console.log(err);
     }
     return;
   }
