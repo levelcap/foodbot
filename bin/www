@@ -49,8 +49,7 @@ async function getAllRecipe(index) {
     const $ = await request(options);
     const title = $('.recipe-summary__h1').text();
     if (!title || title === johnsonville) {
-      console.log(` ${index} is just more sausages!`)
-      return;
+      return `${index} is just more sausages!`
     }
     recipeString = recipeString.concat(`title:${cleanLine(title)}\n`);
     const author = $('.submitter__name').text();
@@ -88,17 +87,18 @@ async function getAllRecipe(index) {
       collection.insert(recipeObj, (err, res) => {
         if (err) {
           console.log(err);
+          return `mongo error inserting ${index}`;
         }
-        console.log(`Inserting ${index}`);
-        return resolve();
+        return resolve(`Inserted ${index}`);
       });
     });
   } catch (err) {
     const errName = _.get(err, 'name');
     if (errName === 'StatusCodeError') {
-      console.log(`StatusCodeError for index ${index}: ${err.statusCode}`);
+      return `StatusCodeError for index ${index}: ${err.statusCode}`;
     }
-    return;
+    console.log(err);
+    return `Unexpected error processing ${index}`;
   }
 }
 
@@ -181,8 +181,8 @@ function createAndStartWorker() {
       // process your message
       console.log("Message: " + msg);
       try {
-        await getAllRecipe(msg);
-        console.log('Done');
+        const result = await getAllRecipe(msg);
+        console.log(result);
       } catch (err) {
         console.log(err);
       }
