@@ -12,6 +12,8 @@ const request = require('request-promise-native');
 const cheerio = require("cheerio");
 const { setRsmq, setMongo, getMongo } = require('../src/common');
 const johnsonville = 'Johnsonville® Three Cheese Italian Style Chicken Sausage Skillet Pizza';
+// 30 minutes
+const timeoutMs = 1800000;
 
 dotenv.config();
 
@@ -29,6 +31,8 @@ const options = {
   client: redisClient,
 };
 const rsmq = new RSMQPromise(options);
+let worker;
+let checkWorkerInterval;
 
 function cleanLine(line) {
   line = line.replace(new RegExp('\n', 'g'), '');
@@ -175,7 +179,7 @@ function createAndStartWorker() {
       rsmq: rsmq.rsmq,
       alwaysLogErrors: true,
     };
-    const worker = new RSMQWorker('allRecipes', workerOptions);
+    worker = new RSMQWorker('allRecipes', workerOptions);
     worker.on("message", async function(msg, next, id) {
       // process your message
       console.log("Message: " + msg);
@@ -183,6 +187,12 @@ function createAndStartWorker() {
       console.log(result);
       if (result.includes('Unexpected error')) {
         next(false);
+        worker.stop();
+        if (!checkWorkerInterval) {
+         setTimeout(() => {
+           worker.start();
+         }, timeoutMs);
+        }
       } else {
         next();
       }
