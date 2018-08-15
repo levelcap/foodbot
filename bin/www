@@ -101,6 +101,7 @@ async function getAllRecipe(index) {
     if (errName === 'StatusCodeError') {
       return `StatusCodeError for index ${index}: ${err.statusCode}`;
     }
+    console.log(err);
     return `Unexpected error processing ${index}`;
   }
 }
@@ -119,7 +120,7 @@ async function getGeniusRecipe(index) {
     const $ = await request(options);
     const title = $('.recipe-header h1').text();
     if (!title) {
-      return;
+      return `${index} did not have a title for some reason`
     }
     recipeString = recipeString.concat(`title:${cleanLine(title)}\n`);
     const author = $('.byline a').text().trim();
@@ -155,26 +156,25 @@ async function getGeniusRecipe(index) {
       collection.insert(recipeObj, (err, res) => {
         if (err) {
           console.log(err);
+          return `mongo error inserting ${index}`;
         }
-        console.log(`Inserting ${index}`);
-        return resolve();
+        return resolve(`Inserted ${index}`);
       });
     });
   } catch (err) {
     const errName = _.get(err, 'name');
     if (errName === 'StatusCodeError') {
-      console.log(`StatusCodeError for index ${index}: ${err.statusCode}`);
-    } else {
-      console.log(err);
+      return `StatusCodeError for index ${index}: ${err.statusCode}`;
     }
-    return;
+    console.log(err);
+    return `Unexpected error processing ${index}`;
   }
 }
 
 function createAndStartWorker() {
   try {
     const workerOptions = {
-      autostart: true,
+      autostart: false,
       timeout: 5000,
       rsmq: rsmq.rsmq,
       alwaysLogErrors: true,
@@ -183,7 +183,21 @@ function createAndStartWorker() {
     worker.on("message", async function(msg, next, id) {
       // process your message
       console.log("Message: " + msg);
-      const result = await getAllRecipe(msg);
+      // const result = await getAllRecipe(msg);
+      // console.log(result);
+      // if (result.includes('Unexpected error')) {
+      //   next(false);
+      //   worker.stop();
+      //   if (!checkWorkerInterval) {
+      //    setTimeout(() => {
+      //      worker.start();
+      //    }, timeoutMs);
+      //   }
+      // } else {
+      //   next();
+      // }
+
+      const result = await getGeniusRecipe(msg);
       console.log(result);
       if (result.includes('Unexpected error')) {
         next(false);
